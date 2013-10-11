@@ -1,1 +1,6 @@
 C:\Users\SammyD\Documents\Projects\Loom\Loom\bin\Debug\Loom.exe.config
+C:\Users\SammyD\Documents\Projects\Loom\Loom\obj\Debug\Loom.csprojResolveAssemblyReference.cache
+C:\Users\SammyD\Documents\Projects\Loom\Loom\bin\Debug\loom.exe
+C:\Users\SammyD\Documents\Projects\Loom\Loom\bin\Debug\loom.pdb
+C:\Users\SammyD\Documents\Projects\Loom\Loom\obj\Debug\loom.exe
+C:\Users\SammyD\Documents\Projects\Loom\Loom\obj\Debug\loom.pdb
