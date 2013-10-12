@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Loom
 {
@@ -43,7 +44,7 @@ namespace Loom
 		/// <summary>
 		/// List of options that are accepted for this parser
 		/// </summary>
-		private List<Option> options = new List<Option>();
+		private Dictionary<String, Option> options = new Dictionary<string, Option>();
 		#endregion
 
 		#region Methods
@@ -74,7 +75,7 @@ namespace Loom
 		public Options(params Option[] options)
 		{
 			// Store the options for when Parse is called
-			this.options.AddRange(options);
+			foreach (Option option in options) this.options[option.LongOption] = option;
 
 			// Setup the invalid argument handler
 			this.InvalidArgumentError = argument =>
@@ -125,7 +126,7 @@ namespace Loom
 						// Add the remaining arguments to the list
 						while (arguments.Count > 0) Parameters.Add(arguments.Dequeue());
 					// Find the option to which this argument pertains
-					Option option = options.Find(o => { return o.LongOption == argument; });
+					Option option = options[argument];
 
 					// Handle option not found
 					if (option == null)
@@ -186,7 +187,7 @@ namespace Loom
 					while (argument.Length > 0)
 					{
 						// Find the option that coencides with this argument
-						Option option = options.Find(o => { return o.ShortOption == argument[0]; });
+						Option option = options.FirstOrDefault(o => { return o.Value.ShortOption == argument[0]; }).Value;
 
 						// If we couldn't find the option, then throw an invalid argument error
 						if (option == null)
@@ -285,7 +286,7 @@ namespace Loom
 			// The width of the longest option
 			int longestOption = 0;
 			// Get the longest option
-			foreach (Option o in options) longestOption = Math.Max(o.LongOption.Length, longestOption);
+			foreach (Option o in options.Values) longestOption = Math.Max(o.LongOption.Length, longestOption);
 			// The indent for the help text will be a little more than the longest 
 			// option to accommodate the short option and some padding
 			int indentWidth = longestOption + 7;
@@ -295,7 +296,7 @@ namespace Loom
 			System.Console.WriteLine("{0} supports the following options: ", exe);
 
 			// Print usage information for each option
-			foreach (Option option in options)
+			foreach (Option option in options.Values)
 			{
 				// Write the short option
 				if (option.ShortOption != 0) System.Console.Write("-{0} ", option.ShortOption);
@@ -344,7 +345,7 @@ namespace Loom
 			String glue = " -";
 
 			// Print each of the options
-			foreach (Option option in options)
+			foreach (Option option in options.Values)
 			{
 				// See what kind of value this option can have
 				switch (option.ValuePresence)
@@ -375,8 +376,7 @@ namespace Loom
 			// Newline
 			System.Console.WriteLine("");
 			// If there is a --help option, then tell the user about it
-			if (options.Find(o => { return o.LongOption == "help"; }) != null)
-				System.Console.WriteLine("Use --help for more information");
+			if (options["help"]) System.Console.WriteLine("Use --help for more information");
 		}
 
 		/// <summary>
@@ -384,22 +384,17 @@ namespace Loom
 		/// </summary>
 		/// <param name="index">The long name of the option to return</param>
 		/// <returns>The value of the long option</returns>
-		public Object this[String index]
+		public Option this[String index]
 		{
 			get
 			{
 				// Find the option with this name and return the value
-				Option option = options.Find(o => { return o.LongOption == index; });
-				// The item wasn't found
-				if (option == null) throw new IndexOutOfRangeException();
-				// Return value
-				return option.Value ?? option.DefaultValue;
+				return options[index];
 			}
 
-			set
-			{
-				// Set the value of the option having this name
-				options.Find(o => { return o.LongOption == index; }).Value = value;
+			set {
+				// Store the option
+				options[index] = value;
 			}
 		}
 
@@ -407,14 +402,13 @@ namespace Loom
 		{
 			String result = "";
 
-			foreach (Option option in options)
+			foreach (Option option in options.Values)
 				result += option.ShortOption.ToString() + "/" + option.LongOption + ": " + option.Value + "\n";
 
 			return result;
 		}
 		#endregion
 	}
-
 
 	/// <summary>
 	/// Encapsulates one of the available options for the command line parser
@@ -447,6 +441,64 @@ namespace Loom
 		{
 			// Store the long option
 			this.LongOption = longOption;
+		}
+
+		public static implicit operator Boolean(Option self)
+		{
+			// By default we'll return false
+			Boolean result = false;
+
+			// Only try to process self is non null
+			if (self != null)
+			{
+				// If the value is non-null, and a boolean, then return it
+				if (self.Value == null) return false;
+				// If the value is already boolean, then just return it
+				if (self.Value is Boolean) return (Boolean)self.Value;
+				if (self.Value is bool) return (Boolean)self.Value;
+				// Try to parse the boolean from a string
+				Boolean.TryParse((String)(self.Value ?? self.DefaultValue), out result);
+			}
+
+			return result;
+		}
+		/// <summary>
+		/// Convert the option to an int and return
+		/// 
+		/// If self is null, then 0 is returned
+		/// If the value is null, then the default value is converted
+		/// </summary>
+		/// <param name="self">The option to convert</param>
+		/// <returns>The value as a integer</returns>
+		public static implicit operator int(Option self)
+		{
+			// Setup the default integer
+			int result = 0;
+			// Try to parse the item into an integer
+			if (self != null)
+			{
+				if (self.Value == null) return 0;
+				if (self.Value is Int32) return (int)self.Value;
+				else System.Console.WriteLine("value: {0}", self.Value.GetType());
+				Int32.TryParse((String)self, out result);
+			}
+
+			return result;
+		}
+		/// <summary>
+		/// Implicitly convert an option to a string
+		/// 
+		/// If self is null, then an empty string is returned
+		/// If self has a null value, then the default value is returned
+		/// </summary>
+		/// <param name="self">The option to convert</param>
+		/// <returns>The string representation of the option</returns>
+		public static implicit operator String(Option self)
+		{
+			// NPE catch
+			if (self == null) return "";
+			// Convert the value to string and return
+			return (String)(self.Value ?? self.DefaultValue);
 		}
 	}
 }

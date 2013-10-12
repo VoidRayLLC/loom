@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +14,9 @@ namespace Loom
 	/// </summary>
 	class Program
 	{
+		// Holds the options for this application
+		static Options options = null;
+
 		/// <summary>
 		/// Main entry point for a C# application, and for ours
 		/// </summary>
@@ -20,9 +24,15 @@ namespace Loom
 		/// <returns>0 on success, >0 otherwise</returns>
 		static int Main(string[] argv)
 		{
-			// Parse the command line arguments
 			#region Configure allowed options
-			Options options = new Options(
+			// Parse the command line arguments
+			options = new Options(
+				// --append
+				new Option("append")
+				{
+					DefaultValue = false,
+					HelpText = "If true, the output file will be appended to. Otherwise, it will be truncated and replaced (by appending)."
+				},
 				// -a <args> arguments for script 
 				new Option("args")
 				{
@@ -39,13 +49,14 @@ namespace Loom
 				{
 					ShortOption = 'h',
 					HelpText = "Show this usage information",
-					Callback = (o, a) => { o.ShowHelp(); o["help"] = true; }
+					Callback = (o, a) => { o.ShowHelp(); o["help"].Value = true; }
 				},
 				// -n <#> number of threads. default=4 
 				new Option("threads")
 				{
 					ShortOption = 'n',
 					ValuePresence = Option.ValueEnum.Required,
+					DefaultValue = 4,
 					HelpText = "Limit number of concurrent threads to <n>"
 				},
 				// -o <output file> csv format. default=results.csv
@@ -70,6 +81,11 @@ namespace Loom
 					ValuePresence = Option.ValueEnum.Optional,
 					DefaultValue = "targets.txt",
 					HelpText = "File containing a list of IP or Hostnames"
+				},
+				new Option("verbose") 
+				{
+					ShortOption = 'v',
+					HelpText = "Say everything we're doing"
 				}
 				);
 			#endregion
@@ -77,7 +93,7 @@ namespace Loom
 			// Parse the options from argv
 			options.Parse(argv);
 			// If help requested, then bail (but with a success code)
-			if (options["help"] != null) return 0;
+			if (options["help"]) return 0;
 			// Don't continue if something is wrong with the options
 			if (options.Failed) return 1;
 
@@ -119,18 +135,15 @@ namespace Loom
 			// Prepare the arguments
 			List<String> arguments = new List<string>();
 			// Add the only argument (later we're going to support a list)
-			if (options["args"] != null) arguments.Add((String)options["args"]);
+			if (options["args"]) arguments.Add(options["args"]);
 			// Add an empty target
 			arguments.Add("");
 			// Will we be doing a dry run?
-			Boolean dryRun = options["dry-run"] != null;
+			Boolean dryRun = options["dry-run"];
 
 			#region Set the cap on the ThreadPool
 			// To hold the number of threads 
-			int maxThreads;
-			// Retrieve the threads option (and convert to int)
-			Int32.TryParse((String)(options["threads"] ?? ""), out maxThreads);
-			System.Console.WriteLine("max threads: " + maxThreads);
+			int maxThreads = options["threads"];
 			// Limit the threads to 'n' threads
 			if (maxThreads > 0) ThreadPool.SetMaxThreads(maxThreads, 0);
 			#endregion
@@ -141,6 +154,16 @@ namespace Loom
 			// manual reset event allows us to control when the ThreadPool should 
 			// consider all the threads complete.
 			ManualResetEvent backgroundThread = new ManualResetEvent(false);
+			// Make sure outputFile isn't blank
+			if (options["output-file"] == "") 
+				// Set it back to the default
+				options["output-file"].Value = options["output-file"].DefaultValue;
+			// Get the output file we're supposed to write 
+			String outputFile = options["output-file"];
+			// Truncate the output file unless append is provided
+			if (!options["append"]) File.Create(outputFile).Close();
+			// Open the output file for writing the results
+			FileStream file = File.Open(outputFile, FileMode.Append);
 
 			// Execute the threads on all the targets
 			foreach (String target in targets)
@@ -154,9 +177,17 @@ namespace Loom
 					// Set the target
 					arguments[arguments.Count - 1] = target;
 					// Run the command
-					String result = RunCommand(dryRun, (String)options["script"], arguments.ToArray());
-					// FIXME: remove this line
-					System.Console.WriteLine(result);
+					String result = RunCommand(dryRun, options["script"], arguments.ToArray());
+					
+					// Aquire a lock for the file to prevent simultaneous edit
+					lock (file)
+					{
+						// Add this line to the end of the file
+						file.Write(Encoding.ASCII.GetBytes(result), 0, result.Length);
+						// Flush the output so anything tailing it can see it immediately
+						file.Flush();
+					}
+					
 					// Remove this task from the list
 					tasks.Remove(task);
 					// If the tasks are empty, then we're done
@@ -171,6 +202,8 @@ namespace Loom
 
 			// Wait for the background thread to be set (complete)
 			backgroundThread.WaitOne();
+			// Close the file. Commit any buffered writes.
+			file.Close();
 			// Everything is ok. Return 0 (true)
 			return 0;
 		}
@@ -194,7 +227,8 @@ namespace Loom
 			// Prepare the arguments. For now just join them, but we'll have to consider escaping in the future
 			String preparedArguments = String.Join(" ", arguments);
 			// Dry run, just echo the command
-			System.Console.WriteLine("{0} {1}", command, String.Join(" ", arguments));
+			if(options["verbose"]) 
+				System.Console.WriteLine("{0} {1}", command, String.Join(" ", arguments));
 
 			// Don't actually spawn the process if this is a dry run
 			if (!dryRun)
@@ -225,7 +259,7 @@ namespace Loom
 				process.ErrorDataReceived += (sender, eventData) =>
 				{
 					// Output the error information immediataely
-					System.Console.WriteLine(eventData.Data);
+					if(eventData.Data != null) System.Console.WriteLine(eventData.Data);
 				};
 
 				// Handler for when we get STDOUT data
