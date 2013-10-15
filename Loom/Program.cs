@@ -99,7 +99,7 @@ namespace Loom
 
 			#region Parse targets
 			// Cache the targets string
-			String targetsFile = (String)options["targets"];
+			String targetsFile = options["targets"];
 			// Initialize our target list
 			Queue<String> targets = new Queue<string>();
 
@@ -110,7 +110,7 @@ namespace Loom
 				if (!File.Exists(targetsFile))
 				{
 					// Tell the user that the file couldn't be found
-					System.Console.WriteLine("ERROR: File {0} does not exist", options["targets"]);
+					System.Console.WriteLine("ERROR: File {0} does not exist", targetsFile);
 					// Bail with an error level
 					return 1;
 				}
