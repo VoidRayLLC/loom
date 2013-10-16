@@ -75,7 +75,7 @@ namespace Loom
 					HelpText = "Script to be called"
 				},
 				// -t <target file> list of IP or Hostnames. default=targets.txt 
-				new Option("targets")
+				new Option("target")
 				{
 					ShortOption = 't',
 					ValuePresence = Option.ValueEnum.Optional,
@@ -99,7 +99,7 @@ namespace Loom
 
 			#region Parse targets
 			// Cache the targets string
-			String targetsFile = options["targets"];
+			String targetsFile = options["target"];
 			// Initialize our target list
 			Queue<String> targets = new Queue<string>();
 
