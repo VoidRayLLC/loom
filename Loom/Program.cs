@@ -228,7 +228,7 @@ namespace Loom
 			String preparedArguments = String.Join(" ", arguments);
 			// Dry run, just echo the command
 			if(options["verbose"]) 
-				System.Console.WriteLine("{0} {1}", command, String.Join(" ", arguments));
+				System.Console.WriteLine("{0} {1}", command, preparedArguments);
 
 			// Don't actually spawn the process if this is a dry run
 			if (!dryRun)
@@ -237,7 +237,7 @@ namespace Loom
 				Process process = Process.Start(new ProcessStartInfo()
 				{
 					// Store the arguments
-					Arguments = String.Join(" ", arguments),
+					Arguments = preparedArguments,
 					// Set the command
 					FileName = command,
 					// Don't use a shell (with an environment) to start the process
