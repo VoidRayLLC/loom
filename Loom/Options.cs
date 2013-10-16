@@ -126,8 +126,6 @@ namespace Loom
 						// Add the remaining arguments to the list
 						while (arguments.Count > 0) Parameters.Add(arguments.Dequeue());
 
-					System.Console.WriteLine("argument: {0}", argument);
-
 					// Initialize the option variable. This will be set by TryGetValue.
 					Option option = null;
 					// Find the option to which this argument pertains
