@@ -292,7 +292,7 @@ namespace Loom
 			foreach (Option o in options.Values) longestOption = Math.Max(o.LongOption.Length, longestOption);
 			// The indent for the help text will be a little more than the longest 
 			// option to accommodate the short option and some padding
-			int indentWidth = longestOption + 7;
+			int indentWidth = longestOption + 6;
 			// Get the name of the exe
 			String exe = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
 			// The header
