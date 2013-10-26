@@ -113,7 +113,7 @@ namespace Loom
 			{
 				// Get the top argument
 				String argument = arguments.Dequeue();
-
+				
 				#region Long argument
 				// This argument is a long argument
 				if (argument.StartsWith("--"))
@@ -122,50 +122,52 @@ namespace Loom
 					argument = argument.Substring(2);
 					// Handle empty argument. If you put ' -- ' anywhere in the command line, 
 					// then it means to stop argument processing.
-					if (argument == "")
+					if (argument == "") 
 						// Add the remaining arguments to the list
 						while (arguments.Count > 0) Parameters.Add(arguments.Dequeue());
 
-					// Initialize the option variable. This will be set by TryGetValue.
-					Option option = null;
-					// Find the option to which this argument pertains
-					options.TryGetValue(argument, out option);
+					else {
+						// Initialize the option variable. This will be set by TryGetValue.
+						Option option = null;
+						// Find the option to which this argument pertains
+						options.TryGetValue(argument, out option);
 
-					// Handle option not found
-					if (option == null)
-					{
-						// Document the invalid argument
-						InvalidArgumentError(argument);
-						// Returning null means that something was irreparably wrong with the arguments
-						return null;
-					}
+						// Handle option not found
+						if (option == null)
+						{
+							// Document the invalid argument
+							InvalidArgumentError(argument);
+							// Returning null means that something was irreparably wrong with the arguments
+							return null;
+						}
 
-					// Finally if we get here, then the argument is good
-					else
-					{
-						if (option.Callback != null) option.Callback(this, arguments);
-
+						// Finally if we get here, then the argument is good
 						else
-							// See if there will be a value for this option
-							switch (option.ValuePresence)
-							{
-								case Option.ValueEnum.Prohibited:
-									// If values are prohibited, the consider this a boolean option
-									option.Value = true;
-									break;
+						{
+							if (option.Callback != null) option.Callback(this, arguments);
 
-								case Option.ValueEnum.Optional:
-									// Get the next value into the option (null if not found)
-									option.Value = NextValue(arguments) ?? option.DefaultValue;
-									break;
-								case Option.ValueEnum.Required:
-									// Get the next value into the option
-									option.Value = NextValue(arguments);
-									// Throw the value required error, because at this point we're past 
-									// the value and into the next argument
-									if (option.Value == null) ValueRequiredError(option);
-									break;
-							}
+							else
+								// See if there will be a value for this option
+								switch (option.ValuePresence)
+								{
+									case Option.ValueEnum.Prohibited:
+										// If values are prohibited, the consider this a boolean option
+										option.Value = true;
+										break;
+
+									case Option.ValueEnum.Optional:
+										// Get the next value into the option (null if not found)
+										option.Value = NextValue(arguments) ?? option.DefaultValue;
+										break;
+									case Option.ValueEnum.Required:
+										// Get the next value into the option
+										option.Value = NextValue(arguments);
+										// Throw the value required error, because at this point we're past 
+										// the value and into the next argument
+										if (option.Value == null) ValueRequiredError(option);
+										break;
+								}
+						}
 					}
 				}
 				#endregion
@@ -294,7 +296,7 @@ namespace Loom
 			// option to accommodate the short option and some padding
 			int indentWidth = longestOption + 6;
 			// Get the name of the exe
-			String exe = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
+			String exe = System.AppDomain.CurrentDomain.FriendlyName;
 			// The header
 			System.Console.WriteLine("{0} supports the following options: ", exe);
 
@@ -341,7 +343,7 @@ namespace Loom
 		public void ShowUsage()
 		{
 			// Get the name of the current exe
-			String exe = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
+			String exe = System.AppDomain.CurrentDomain.FriendlyName;
 			// Show the usage prefix with the name of the exe
 			System.Console.Write("usage: {0}", exe);
 			// What will be used to pad the next argument
