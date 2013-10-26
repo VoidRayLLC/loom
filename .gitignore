@@ -1,7 +1,27 @@
+##################################################
+# Project
+##################################################
+
+# Compiled versions
+*.exe
+# Don't know what this is
+*.exe.mdb
+
+# The results file for testing
+results.csv
+# The targets file for testing
+targets.txt
 
 ##################################################
-# Windows 
+# Windows
 ##################################################
 
 # Folder metadata
 desktop.ini
+
+##################################################
+# Mac
+##################################################
+
+# Folder metedata
+.DS_Store
