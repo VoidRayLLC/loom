@@ -136,6 +136,8 @@ namespace Loom
 			List<String> arguments = new List<string>();
 			// Add the only argument (later we're going to support a list)
 			if (options["args"]) arguments.Add(options["args"]);
+			// Add the tail parameters if present
+			arguments.AddRange(options.Parameters);
 			// Add an empty target
 			arguments.Add("");
 			// Will we be doing a dry run?
