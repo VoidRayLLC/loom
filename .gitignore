@@ -6,6 +6,10 @@
 *.exe
 # Don't know what this is
 *.exe.mdb
+# Compilation temp files
+obj
+# Compiled results
+bin
 
 # The results file for testing
 results.csv
