@@ -177,9 +177,9 @@ namespace Loom
 				task = (o) =>
 				{
 					// Set the target
-					arguments[arguments.Count - 1] = target;
+					// arguments[arguments.Count - 1] = target;
 					// Run the command
-					String result = RunCommand(dryRun, options["script"], arguments.ToArray());
+					String result = RunCommand(dryRun, options["script"], target, arguments.ToArray());
 					
 					// Aquire a lock for the file to prevent simultaneous edit
 					lock (file)
@@ -224,13 +224,17 @@ namespace Loom
 		/// <param name="command">The command to run</param>
 		/// <param name="arguments">The arguments to pass to the command</param>
 		/// <returns>The captured STDOUT</returns>
-		protected static String RunCommand(Boolean dryRun, String command, params String[] arguments)
+		protected static String RunCommand(Boolean dryRun, String command, String target, params String[] arguments)
 		{
 			// Prepare the arguments. For now just join them, but we'll have to consider escaping in the future
 			String preparedArguments = String.Join(" ", arguments);
-			// Dry run, just echo the command
-			if(options["verbose"]) 
-				System.Console.WriteLine("{0} {1}", command, preparedArguments);
+			
+			// show target being scanned.  Verbose echos the full command
+			if(options["verbose"] || options["dryRun"]) 
+				System.Console.WriteLine("Scanning: {0} with {1} {2}", target, command, preparedArguments);
+			else
+				// Echo the command
+            			System.Console.WriteLine("Scanning: {0}", target);
 
 			// Don't actually spawn the process if this is a dry run
 			if (!dryRun)
