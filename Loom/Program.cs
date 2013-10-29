@@ -230,6 +230,7 @@ namespace Loom
 		{
 			// Prepare the arguments. For now just join them, but we'll have to consider escaping in the future
 			String preparedArguments = String.Join(" ", arguments);
+			// Increment global counter to track progress
 			Interlocked.Increment(ref numScanned);
 			
 			// show target being scanned.  Verbose echos the full command
@@ -275,13 +276,13 @@ namespace Loom
 				{
 					// Add this to the result
 					result += eventData.Data;
+					// Trim up the result to kill trailing whitespace and add CR+LF for windows					
                     			result = result.Trim() + "\r\n";
 				};
 
 				// Wait for the process to cleanly exit
 				process.WaitForExit();
 
-				// Trim up the result to kill trailing whitespace
 				return result;
 			}
 
