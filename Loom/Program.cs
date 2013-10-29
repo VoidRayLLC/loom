@@ -38,7 +38,9 @@ namespace Loom
 				{
 					ShortOption = 'a',
 					ValuePresence = Option.ValueEnum.Required,
-					HelpText = "Arguments for the script"
+					HelpText = "Arguments for the script",
+					// Consume all the remaining arguments like '--' does
+					Callback = (o, a) => { while(a.Count > 0) o.Parameters.Add(a.Dequeue()); }
 				},
 				new Option("dry-run")
 				{
