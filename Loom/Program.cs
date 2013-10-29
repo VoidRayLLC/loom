@@ -16,6 +16,8 @@ namespace Loom
 	{
 		// Holds the options for this application
 		static Options options = null;
+		//Create global counter
+		public static int numScanned = 0;
 
 		/// <summary>
 		/// Main entry point for a C# application, and for ours
@@ -134,12 +136,12 @@ namespace Loom
 
 			// Prepare the arguments
 			List<String> arguments = new List<string>();
+			// Add an empty target
+			arguments.Add("");
 			// Add the only argument (later we're going to support a list)
 			if (options["args"]) arguments.Add(options["args"]);
 			// Add the tail parameters if present
 			arguments.AddRange(options.Parameters);
-			// Add an empty target
-			arguments.Add("");
 			// Will we be doing a dry run?
 			Boolean dryRun = options["dry-run"];
 
@@ -177,7 +179,7 @@ namespace Loom
 				task = (o) =>
 				{
 					// Set the target
-					// arguments[arguments.Count - 1] = target;
+					arguments[0] = target;
 					// Run the command
 					String result = RunCommand(dryRun, options["script"], target, arguments.ToArray());
 					
@@ -228,13 +230,13 @@ namespace Loom
 		{
 			// Prepare the arguments. For now just join them, but we'll have to consider escaping in the future
 			String preparedArguments = String.Join(" ", arguments);
+			Interlocked.Increment(ref numScanned);
 			
 			// show target being scanned.  Verbose echos the full command
-			if(options["verbose"] || options["dryRun"]) 
-				System.Console.WriteLine("Scanning: {0} with {1} {2}", target, command, preparedArguments);
-			else
-				// Echo the command
-            			System.Console.WriteLine("Scanning: {0}", target);
+            		if (options["verbose"] || dryRun)
+                		System.Console.WriteLine("{0}: Scanning {1} with => {2} {3}", numScanned, target, command, preparedArguments);
+            		else
+                		System.Console.WriteLine("{0}: Scanning {1}", numScanned, target);
 
 			// Don't actually spawn the process if this is a dry run
 			if (!dryRun)
@@ -255,7 +257,7 @@ namespace Loom
 				});
 
 				// Buffer to hold the text from STDOUT
-				String result = "";
+				String result = target + ",";
 				// Start capturing STDOUT
 				process.BeginOutputReadLine();
 				// Start capturing STDERR
@@ -272,14 +274,15 @@ namespace Loom
 				process.OutputDataReceived += (sender, eventData) =>
 				{
 					// Add this to the result
-					result += eventData.Data + "\n";
+					result += eventData.Data;
+                    			result = result.Trim() + "\r\n";
 				};
 
 				// Wait for the process to cleanly exit
 				process.WaitForExit();
 
 				// Trim up the result to kill trailing whitespace
-				return result.Trim();
+				return result;
 			}
 
 			return "";
