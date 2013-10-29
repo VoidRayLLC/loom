@@ -16,6 +16,8 @@ namespace Loom
 	{
 		// Holds the options for this application
 		static Options options = null;
+		//Create global counter
+		public static int numScanned = 0;
 
 		/// <summary>
 		/// Main entry point for a C# application, and for ours
@@ -136,12 +138,12 @@ namespace Loom
 
 			// Prepare the arguments
 			List<String> arguments = new List<string>();
+			// Add an empty target
+			arguments.Add("");
 			// Add the only argument (later we're going to support a list)
 			if (options["args"]) arguments.Add(options["args"]);
 			// Add the tail parameters if present
 			arguments.AddRange(options.Parameters);
-			// Add an empty target
-			arguments.Add("");
 			// Will we be doing a dry run?
 			Boolean dryRun = options["dry-run"];
 
@@ -179,9 +181,9 @@ namespace Loom
 				task = (o) =>
 				{
 					// Set the target
-					arguments[arguments.Count - 1] = target;
+					arguments[0] = target;
 					// Run the command
-					String result = RunCommand(dryRun, options["script"], arguments.ToArray());
+					String result = RunCommand(dryRun, options["script"], target, arguments.ToArray());
 					
 					// Aquire a lock for the file to prevent simultaneous edit
 					lock (file)
@@ -226,13 +228,18 @@ namespace Loom
 		/// <param name="command">The command to run</param>
 		/// <param name="arguments">The arguments to pass to the command</param>
 		/// <returns>The captured STDOUT</returns>
-		protected static String RunCommand(Boolean dryRun, String command, params String[] arguments)
+		protected static String RunCommand(Boolean dryRun, String command, String target, params String[] arguments)
 		{
 			// Prepare the arguments. For now just join them, but we'll have to consider escaping in the future
 			String preparedArguments = String.Join(" ", arguments);
-			// Dry run, just echo the command
-			if(options["verbose"]) 
-				System.Console.WriteLine("{0} {1}", command, preparedArguments);
+			// Increment global counter to track progress
+			Interlocked.Increment(ref numScanned);
+			
+			// show target being scanned.  Verbose echos the full command
+            		if (options["verbose"] || dryRun)
+                		System.Console.WriteLine("{0}: Scanning {1} with => {2} {3}", numScanned, target, command, preparedArguments);
+            		else
+                		System.Console.WriteLine("{0}: Scanning {1}", numScanned, target);
 
 			// Don't actually spawn the process if this is a dry run
 			if (!dryRun)
@@ -253,7 +260,7 @@ namespace Loom
 				});
 
 				// Buffer to hold the text from STDOUT
-				String result = "";
+				String result = target + ",";
 				// Start capturing STDOUT
 				process.BeginOutputReadLine();
 				// Start capturing STDERR
@@ -270,14 +277,15 @@ namespace Loom
 				process.OutputDataReceived += (sender, eventData) =>
 				{
 					// Add this to the result
-					result += eventData.Data + "\n";
+					result += eventData.Data;
+					// Trim up the result to kill trailing whitespace and add CR+LF for windows					
+                    			result = result.Trim() + "\r\n";
 				};
 
 				// Wait for the process to cleanly exit
 				process.WaitForExit();
 
-				// Trim up the result to kill trailing whitespace
-				return result.Trim();
+				return result;
 			}
 
 			return "";
